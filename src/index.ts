@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 export { Button } from "./components/ui/button"
 export type { ButtonProps } from "./components/ui/button"
 
@@ -11,3 +13,6 @@ export { Badge } from "./components/ui/badge"
 export type { BadgeProps } from "./components/ui/badge"
 
 export { cn } from "./lib/utils"
+
+export * from "./registry"
+export * from "./hooks"
