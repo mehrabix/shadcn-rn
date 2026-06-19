@@ -1,24 +1,183 @@
+import { registryConfigSchema } from "../schema"
+import { z } from "zod"
+
 export const REGISTRY_URL =
-  process.env.SHADCN_RN_REGISTRY_URL ||
-  "https://raw.githubusercontent.com/mehrabix/shadcn-rn/main/registry"
+  process.env.REGISTRY_URL ?? "https://shadcn-rn.dev/r"
 
-export const BUILTIN_REGISTRIES: Record<string, string> = {
-  "@shadcn-rn": `${REGISTRY_URL}/{name}.json`,
-}
+export const SHADCN_URL = REGISTRY_URL.replace(/\/r\/?$/, "")
 
-export const DEFAULT_STYLE = "default"
+export const FALLBACK_STYLE = "new-york-v4"
 
 export const BASE_COLORS = [
-  { name: "neutral", label: "Neutral" },
-  { name: "zinc", label: "Zinc" },
-  { name: "slate", label: "Slate" },
-  { name: "stone", label: "Stone" },
+  {
+    name: "neutral",
+    label: "Neutral",
+  },
+  {
+    name: "zinc",
+    label: "Zinc",
+  },
+  {
+    name: "stone",
+    label: "Stone",
+  },
+  {
+    name: "mauve",
+    label: "Mauve",
+  },
+  {
+    name: "olive",
+    label: "Olive",
+  },
+  {
+    name: "mist",
+    label: "Mist",
+  },
+  {
+    name: "taupe",
+    label: "Taupe",
+  },
 ] as const
 
-export const DEPRECATED_COMPONENTS: Record<string, string> = {}
+export const BUILTIN_REGISTRIES: z.infer<typeof registryConfigSchema> = {
+  "@shadcn": `${REGISTRY_URL}/styles/{style}/{name}.json`,
+}
 
-export const DEFAULT_COMPONENTS_PATH = "@/components"
+export const BUILTIN_MODULES = new Set([
+  "node:assert",
+  "assert",
+  "node:assert/strict",
+  "assert/strict",
+  "node:async_hooks",
+  "async_hooks",
+  "node:buffer",
+  "buffer",
+  "node:child_process",
+  "child_process",
+  "node:cluster",
+  "cluster",
+  "node:console",
+  "console",
+  "node:constants",
+  "constants",
+  "node:crypto",
+  "crypto",
+  "node:dgram",
+  "dgram",
+  "node:diagnostics_channel",
+  "diagnostics_channel",
+  "node:dns",
+  "dns",
+  "node:dns/promises",
+  "dns/promises",
+  "node:domain",
+  "domain",
+  "node:events",
+  "events",
+  "node:fs",
+  "fs",
+  "node:fs/promises",
+  "fs/promises",
+  "node:http",
+  "http",
+  "node:http2",
+  "http2",
+  "node:https",
+  "https",
+  "node:inspector",
+  "inspector",
+  "node:inspector/promises",
+  "inspector/promises",
+  "node:module",
+  "module",
+  "node:net",
+  "net",
+  "node:os",
+  "os",
+  "node:path",
+  "path",
+  "node:path/posix",
+  "path/posix",
+  "node:path/win32",
+  "path/win32",
+  "node:perf_hooks",
+  "perf_hooks",
+  "node:process",
+  "process",
+  "node:querystring",
+  "querystring",
+  "node:quic",
+  "node:readline",
+  "readline",
+  "node:readline/promises",
+  "readline/promises",
+  "node:repl",
+  "repl",
+  "node:sea",
+  "node:sqlite",
+  "node:stream",
+  "stream",
+  "node:stream/consumers",
+  "stream/consumers",
+  "node:stream/promises",
+  "stream/promises",
+  "node:stream/web",
+  "stream/web",
+  "node:string_decoder",
+  "string_decoder",
+  "node:test",
+  "node:test/reporters",
+  "node:timers",
+  "timers",
+  "node:timers/promises",
+  "timers/promises",
+  "node:tls",
+  "tls",
+  "node:trace_events",
+  "trace_events",
+  "node:tty",
+  "tty",
+  "node:url",
+  "url",
+  "node:util",
+  "util",
+  "node:util/types",
+  "util/types",
+  "node:v8",
+  "v8",
+  "node:vm",
+  "vm",
+  "node:wasi",
+  "wasi",
+  "node:worker_threads",
+  "worker_threads",
+  "node:zlib",
+  "zlib",
+  "bun",
+  "bun:test",
+  "bun:sqlite",
+  "bun:ffi",
+  "bun:jsc",
+  "bun:internal",
+])
+
 export const DEFAULT_UTILS_PATH = "@/lib/utils"
+export const DEFAULT_COMPONENTS_PATH = "@/components"
 export const DEFAULT_UI_PATH = "@/components/ui"
 export const DEFAULT_HOOKS_PATH = "@/hooks"
 export const DEFAULT_LIB_PATH = "@/lib"
+
+export const DEPRECATED_COMPONENTS = [
+  {
+    name: "toast",
+    deprecatedBy: "sonner",
+    message:
+      "The toast component is deprecated. Use the sonner component instead.",
+  },
+  {
+    name: "toaster",
+    deprecatedBy: "sonner",
+    message:
+      "The toaster component is deprecated. Use the sonner component instead.",
+  },
+]

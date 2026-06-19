@@ -1,35 +1,35 @@
-export interface Preset {
-  name: string
-  title: string
-  description: string
-  style: string
-  baseColor: string
-  iconLibrary: string
-}
+export {
+  type PresetConfig,
+  PRESET_BASES,
+  PRESET_STYLES,
+  PRESET_BASE_COLORS,
+  PRESET_THEMES,
+  PRESET_CHART_COLORS,
+  PRESET_ICON_LIBRARIES,
+  PRESET_FONTS,
+  PRESET_FONT_HEADINGS,
+  PRESET_RADII,
+  PRESET_MENU_ACCENTS,
+  PRESET_MENU_COLORS,
+  DEFAULT_PRESET_CONFIG,
+  toBase62,
+  fromBase62,
+  encodePreset,
+  decodePreset,
+  isPresetCode,
+  isValidPreset,
+  generateRandomConfig,
+  generateRandomPreset,
+} from "./preset"
 
-export const defaultPresets: Preset[] = [
-  {
-    name: "default",
-    title: "Default",
-    description: "Default preset with standard styling",
-    style: "default",
-    baseColor: "neutral",
-    iconLibrary: "lucide",
-  },
-  {
-    name: "new-york",
-    title: "New York",
-    description: "New York style preset",
-    style: "new-york",
-    baseColor: "zinc",
-    iconLibrary: "lucide",
-  },
-]
+export { DEFAULT_PRESETS } from "./defaults"
+export type { PresetDefaults } from "./defaults"
 
-export function getPreset(name: string): Preset | undefined {
-  return defaultPresets.find((p) => p.name === name)
-}
-
-export function getPresetNames(): string[] {
-  return defaultPresets.map((p) => p.name)
-}
+export {
+  resolveCreateUrl,
+  promptToOpenPresetBuilder,
+  resolveInitUrl,
+  promptForBase,
+  promptForPreset,
+  resolveRegistryBaseConfig,
+} from "./presets"

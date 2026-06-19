@@ -33,7 +33,23 @@
       "import": "./dist/hooks/*.js",
       "types": "./dist/hooks/*.d.ts"
     },
-    "./styles/tailwind.css": "./src/styles/tailwind.css"
+    "./styles/tailwind.css": "./src/styles/tailwind.css",
+    "./colors": {
+      "import": "./dist/colors.js",
+      "types": "./dist/colors.d.ts"
+    },
+    "./preset": {
+      "import": "./dist/preset/index.js",
+      "types": "./dist/preset/index.d.ts"
+    },
+    "./mcp": {
+      "import": "./dist/mcp/index.js",
+      "types": "./dist/mcp/index.d.ts"
+    },
+    "./icons": {
+      "import": "./dist/icons/index.js",
+      "types": "./dist/icons/index.d.ts"
+    }
   },
   "files": [
     "dist",
@@ -58,19 +74,37 @@
     "cli"
   ],
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "chalk": "^5.3.0",
     "commander": "^12.0.0",
     "cosmiconfig": "^9.0.0",
-    "zod": "^3.22.0"
+    "dedent": "^1.5.1",
+    "diff": "^7.0.0",
+    "execa": "^9.5.2",
+    "fast-glob": "^3.3.3",
+    "fs-extra": "^11.2.0",
+    "fuzzysort": "^3.1.0",
+    "ora": "^8.1.1",
+    "postcss": "^8.4.49",
+    "prompts": "^2.4.2",
+    "recast": "^0.23.2",
+    "tailwind-merge": "^3.0.2",
+    "ts-morph": "^25.0.0",
+    "zod": "^3.22.0",
+    "zod-to-json-schema": "^3.24.5"
   },
   "peerDependencies": {
     "react": ">=18.0.0",
     "react-native": ">=0.72.0"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "vitest": "^1.0.0",
+    "@types/diff": "^7.0.0",
+    "@types/fs-extra": "^11.0.4",
+    "@types/prompts": "^2.4.9",
+    "rimraf": "^5.0.0",
     "tsup": "^8.0.0",
-    "rimraf": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
   },
   "license": "MIT"
 }

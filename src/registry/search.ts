@@ -2,11 +2,28 @@ import { REGISTRY_URL } from "./constants"
 import type { RegistryItem } from "./schema"
 import { searchResultsSchema, type SearchResultItem } from "./schema"
 
+export const SEARCHABLE_TYPES = [
+  "registry:ui",
+  "registry:lib",
+  "registry:block",
+  "registry:hook",
+  "registry:theme",
+  "registry:style",
+  "registry:layout",
+  "registry:headless",
+  "registry:party",
+  "registry:other",
+] as const
+
 export interface SearchOptions {
-  query: string
+  query?: string
   registries?: string[]
+  types?: string[]
   limit?: number
   offset?: number
+  config?: unknown
+  useCache?: boolean
+  continueOnError?: boolean
 }
 
 export interface SearchResults {
@@ -17,14 +34,31 @@ export interface SearchResults {
     hasMore: boolean
   }
   items: SearchResultItem[]
+  errors?: Array<{ registry: string; message: string }>
+}
+
+export function resolveSearchRegistries(
+  registries: string[],
+  config: { registries?: Record<string, string> }
+): string[] {
+  if (registries.length > 0) {
+    return registries
+  }
+  return Object.keys(config.registries ?? {})
+}
+
+export function findUnknownSearchTypes(types: string[]): string[] {
+  return types.filter((type) => !SEARCHABLE_TYPES.includes(type as typeof SEARCHABLE_TYPES[number]))
 }
 
 export async function searchRegistries(
+  registries: string[],
   options: SearchOptions
 ): Promise<SearchResults> {
-  const { query, registries = ["@shadcn-rn"], limit = 10, offset = 0 } = options
+  const { query, types, limit = 10, offset = 0, continueOnError = false } = options
 
   const allItems: SearchResultItem[] = []
+  const errors: Array<{ registry: string; message: string }> = []
 
   for (const registry of registries) {
     try {
@@ -35,10 +69,15 @@ export async function searchRegistries(
       const items = (await response.json()) as RegistryItem[]
 
       for (const item of items) {
-        if (
+        if (types?.length && !types.includes(item.type ?? "")) {
+          continue
+        }
+
+        const matchesQuery = !query ||
           item.name.toLowerCase().includes(query.toLowerCase()) ||
           item.description?.toLowerCase().includes(query.toLowerCase())
-        ) {
+
+        if (matchesQuery) {
           allItems.push({
             name: item.name,
             type: item.type,
@@ -48,8 +87,12 @@ export async function searchRegistries(
           })
         }
       }
-    } catch {
-      // Skip registries that fail to load
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error"
+      errors.push({ registry, message })
+      if (!continueOnError) {
+        throw error
+      }
     }
   }
 
@@ -63,5 +106,6 @@ export async function searchRegistries(
       hasMore: offset + limit < allItems.length,
     },
     items: paginatedItems,
+    errors: errors.length > 0 ? errors : undefined,
   }
 }

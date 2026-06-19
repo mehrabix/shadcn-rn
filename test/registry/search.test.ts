@@ -12,7 +12,7 @@ describe("search", () => {
         ]),
       }))
 
-      const results = await searchRegistries({ query: "button" })
+      const results = await searchRegistries(["@shadcn"], { query: "button" })
       expect(results.items.length).toBeGreaterThan(0)
       expect(results.items[0].name).toBe("button")
     })
@@ -23,7 +23,7 @@ describe("search", () => {
         json: vi.fn().mockResolvedValue([]),
       }))
 
-      const results = await searchRegistries({ query: "nonexistent" })
+      const results = await searchRegistries(["@shadcn"], { query: "nonexistent" })
       expect(results.items).toHaveLength(0)
     })
 
@@ -37,15 +37,16 @@ describe("search", () => {
         ]),
       }))
 
-      const results = await searchRegistries({ query: "item", limit: 2, offset: 0 })
+      const results = await searchRegistries(["@shadcn"], { query: "item", limit: 2, offset: 0 })
       expect(results.items).toHaveLength(2)
       expect(results.pagination.hasMore).toBe(true)
     })
 
     it("should handle fetch errors", async () => {
       vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network error")))
-      const results = await searchRegistries({ query: "button" })
+      const results = await searchRegistries(["@shadcn"], { query: "button", continueOnError: true })
       expect(results.items).toHaveLength(0)
+      expect(results.errors).toHaveLength(1)
     })
   })
 })
