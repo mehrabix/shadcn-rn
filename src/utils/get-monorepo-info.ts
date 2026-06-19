@@ -20,7 +20,7 @@ export async function getMonorepoInfo(cwd: string): Promise<{
       return {
         isMonorepo: true,
         packages: workspaces,
-        type: detectMonorepoType(cwd),
+        type: await detectMonorepoType(cwd),
       }
     }
 
