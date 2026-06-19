@@ -24,11 +24,56 @@ export async function updateTailwindContent(
   ).start()
 
   try {
-    let configContent = ""
+    let configContent: string
     try {
       configContent = await fs.readFile(configPath, "utf-8")
     } catch {
+      contentSpinner.fail()
       return
+    }
+
+    const contentArrayRegex = /content\s*:\s*\[([^\]]*)\]/
+    const match = configContent.match(contentArrayRegex)
+
+    if (match) {
+      const existingEntries = match[1]
+        .split(",")
+        .map((s) => s.trim().replace(/['"]/g, ""))
+        .filter(Boolean)
+
+      const newEntries = content.filter((c) => !existingEntries.includes(c))
+
+      if (newEntries.length === 0) {
+        contentSpinner.succeed("Content paths already up to date")
+        return
+      }
+
+      const allEntries = [...existingEntries, ...newEntries]
+      const formattedEntries = allEntries
+        .map((e) => `      '${e}'`)
+        .join(",\n")
+
+      const newContentArray = `content: [\n${formattedEntries},\n    ]`
+      configContent = configContent.replace(contentArrayRegex, newContentArray)
+    } else {
+      const contentEntries = content.map((c) => `      '${c}'`).join(",\n")
+      const contentBlock = `  content: [\n${contentEntries},\n  ],`
+
+      const themeMatch = configContent.match(/theme\s*:\s*\{/)
+      if (themeMatch) {
+        configContent = configContent.replace(
+          themeMatch[0],
+          `${contentBlock}\n  ${themeMatch[0]}`
+        )
+      } else {
+        const moduleMatch = configContent.match(/module\.exports\s*=\s*\{/)
+        if (moduleMatch) {
+          configContent = configContent.replace(
+            moduleMatch[0],
+            `module.exports = {\n${contentBlock},`
+          )
+        }
+      }
     }
 
     await fs.writeFile(configPath, configContent)

@@ -23,28 +23,50 @@ export async function updateCssVars(
   ).start()
 
   try {
-    let output = await fs.readFile(cssFilepath, "utf-8")
+    let output: string
+    try {
+      output = await fs.readFile(cssFilepath, "utf-8")
+    } catch {
+      output = ""
+    }
 
     for (const [selector, vars] of Object.entries(cssVars)) {
       const selectorName = selector === "light" ? ":root" : `.${selector}`
 
+      let selectorBlock = findSelectorBlock(output, selectorName)
+
       for (const [key, value] of Object.entries(vars)) {
         const prop = `--${key.replace(/^--/, "")}`
-        const decl = `  ${prop}: ${value};`
 
-        const existingRule = output.match(
-          new RegExp(`${selectorName}\\s*\\{[^}]*${prop}[^}]*\\}`, "s")
-        )
-
-        if (existingRule) {
-          const updatedRule = existingRule[0].replace(
-            new RegExp(`${prop}\\s*:[^;]+;`),
-            `${prop}: ${value};`
+        if (selectorBlock) {
+          const propRegex = new RegExp(
+            `${prop.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*:[^;]+;`
           )
-          output = output.replace(existingRule[0], updatedRule)
+          if (propRegex.test(selectorBlock)) {
+            selectorBlock = selectorBlock.replace(propRegex, `${prop}: ${value};`)
+            output = output.replace(
+              findSelectorBlock(output, selectorName) || "",
+              selectorBlock
+            )
+          } else {
+            const insertPos = selectorBlock.lastIndexOf("}")
+            const newDecl = `  ${prop}: ${value};\n`
+            selectorBlock =
+              selectorBlock.slice(0, insertPos) +
+              newDecl +
+              selectorBlock.slice(insertPos)
+            const oldBlock = findSelectorBlock(output, selectorName)
+            if (oldBlock) {
+              output = output.replace(oldBlock, selectorBlock)
+            }
+          }
         } else {
-          const rule = `${selectorName} {\n${decl}\n}`
-          output += `\n\n${rule}`
+          const newBlock = `${selectorName} {\n  ${prop}: ${value};\n}`
+          if (output.length > 0) {
+            output += `\n\n${newBlock}`
+          } else {
+            output = newBlock
+          }
         }
       }
     }
@@ -54,4 +76,22 @@ export async function updateCssVars(
   } catch {
     cssVarsSpinner.fail()
   }
+}
+
+function findSelectorBlock(css: string, selector: string): string | null {
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  const regex = new RegExp(`${escapedSelector}\\s*\\{`, "g")
+  const match = regex.exec(css)
+  if (!match) return null
+
+  let depth = 0
+  let start = match.index + match[0].length - 1
+  for (let i = start; i < css.length; i++) {
+    if (css[i] === "{") depth++
+    if (css[i] === "}") depth--
+    if (depth === 0) {
+      return css.slice(match.index, i + 1)
+    }
+  }
+  return null
 }
