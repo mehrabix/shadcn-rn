@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest"
-import { transformImport, transformRsc, transformCssVars, transformTwPrefixes, transformCleanup } from "../../src/utils/transformers"
+import {
+  transformImportString as transformImport,
+  transformRscString as transformRsc,
+  transformCssVarsString as transformCssVars,
+  transformTwPrefixesString as transformTwPrefixes,
+  transformCleanupString as transformCleanup,
+} from "../../src/utils/transformers"
 
 describe("transformers", () => {
   describe("transformImport", () => {

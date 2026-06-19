@@ -1,5 +1,5 @@
-import { type Transformer } from "./transformers"
+import { type Transformer } from "./index"
 
-export const transformNext: Transformer = async ({ sourceFile, config }) => {
+export const transformNext: Transformer = async ({ sourceFile }) => {
   return sourceFile
 }

@@ -1,8 +1,5 @@
-import { type Transformer } from "./transformers"
+import { type Transformer } from "./index"
 
-export const transformLegacyIcons: Transformer = async ({
-  sourceFile,
-  config,
-}) => {
+export const transformLegacyIcons: Transformer = async ({ sourceFile }) => {
   return sourceFile
 }
