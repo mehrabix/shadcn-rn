@@ -3,7 +3,7 @@ export interface ParsedRegistryItem {
   item: string
 }
 
-const REGISTRY_ITEM_PATTERN = /^(@[a-zA-Z0-9](?:[a-zA-Z0-9-_]*[a-zA-Z0-9])?)\/(.+)$/
+const REGISTRY_ITEM_PATTERN = /^(@[a-zA-Z0-9](?:[a-zA-Z0-9-_]*[a-zA-Z0-9])?)\/([^\s]+)$/
 
 export function parseRegistryAndItemFromString(input: string): ParsedRegistryItem | null {
   const match = input.match(REGISTRY_ITEM_PATTERN)

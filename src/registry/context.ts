@@ -3,7 +3,12 @@ export type RegistryHeaders = Record<string, Record<string, string>>
 let registryHeaders: RegistryHeaders = {}
 
 export function setRegistryHeaders(headers: RegistryHeaders): void {
-  registryHeaders = { ...registryHeaders, ...headers }
+  for (const [url, urlHeaders] of Object.entries(headers)) {
+    registryHeaders[url] = {
+      ...(registryHeaders[url] || {}),
+      ...urlHeaders,
+    }
+  }
 }
 
 export function getRegistryHeadersFromContext(

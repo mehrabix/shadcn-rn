@@ -35,8 +35,8 @@ export const rawConfigSchema = z
       })
       .default({}),
     aliases: z.object({
-      components: z.string().default "@/components"),
-      utils: z.string().default "@/lib/utils"),
+      components: z.string().default("@/components"),
+      utils: z.string().default("@/lib/utils"),
       ui: z.string().optional(),
       lib: z.string().optional(),
       hooks: z.string().optional(),
