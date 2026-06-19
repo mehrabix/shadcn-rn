@@ -3,10 +3,11 @@ import { migrations, runMigration, runAllMigrations } from "../../src/migrations
 
 describe("migrations", () => {
   describe("migrations", () => {
-    it("should have icons and rtl migrations", () => {
-      expect(migrations).toHaveLength(2)
+    it("should have icons, rtl, and radix migrations", () => {
+      expect(migrations).toHaveLength(3)
       expect(migrations[0].name).toBe("icons")
       expect(migrations[1].name).toBe("rtl")
+      expect(migrations[2].name).toBe("radix")
     })
   })
 

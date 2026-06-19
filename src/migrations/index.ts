@@ -1,6 +1,7 @@
-import * as fs from "fs/promises"
-import * as path from "path"
 import { log, info, success } from "../utils/logger"
+import { migrateIcons } from "./migrate-icons"
+import { migrateRtl } from "./migrate-rtl"
+import { migrateRadix } from "./migrate-radix"
 
 export interface Migration {
   name: string
@@ -12,16 +13,17 @@ export const migrations: Migration[] = [
   {
     name: "icons",
     description: "Update icon imports",
-    run: async (cwd: string) => {
-      info("Updating icon imports...")
-    },
+    run: migrateIcons,
   },
   {
     name: "rtl",
     description: "Add RTL support",
-    run: async (cwd: string) => {
-      info("Adding RTL support...")
-    },
+    run: migrateRtl,
+  },
+  {
+    name: "radix",
+    description: "Migrate Radix UI imports to React Native",
+    run: migrateRadix,
   },
 ]
 

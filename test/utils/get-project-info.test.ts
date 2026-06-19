@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest"
 import { getProjectInfo } from "../../src/utils/get-project-info"
 import * as fs from "fs/promises"
-import * as path from "path"
 
 vi.mock("fs/promises")
 
@@ -13,37 +12,35 @@ describe("get-project-info", () => {
   })
 
   it("should detect expo framework", async () => {
-    mockFs.readFile.mockResolvedValue(JSON.stringify({
+    mockFs.readFile.mockResolvedValueOnce(JSON.stringify({
       dependencies: { expo: "~50.0.0" }
     }))
-    mockFs.access.mockRejectedValue(new Error("ENOENT"))
     const info = await getProjectInfo("/test")
-    expect(info.framework).toBe("expo")
+    expect(info.framework.name).toBe("expo")
+    expect(info.framework.label).toBe("Expo")
   })
 
   it("should detect bare react-native", async () => {
-    mockFs.readFile.mockResolvedValue(JSON.stringify({
+    mockFs.readFile.mockResolvedValueOnce(JSON.stringify({
       dependencies: { "react-native": "0.73.0" }
     }))
-    mockFs.access.mockRejectedValue(new Error("ENOENT"))
     const info = await getProjectInfo("/test")
-    expect(info.framework).toBe("bare-react-native")
+    expect(info.framework.name).toBe("bare-react-native")
+    expect(info.framework.label).toBe("Bare React Native")
   })
 
   it("should detect nativewind", async () => {
-    mockFs.readFile.mockResolvedValue(JSON.stringify({
+    mockFs.readFile.mockResolvedValueOnce(JSON.stringify({
       dependencies: { nativewind: "^2.0.0" }
     }))
-    mockFs.access.mockRejectedValue(new Error("ENOENT"))
     const info = await getProjectInfo("/test")
     expect(info.hasNativeWind).toBe(true)
   })
 
   it("should detect typescript", async () => {
-    mockFs.readFile.mockResolvedValue(JSON.stringify({
+    mockFs.readFile.mockResolvedValueOnce(JSON.stringify({
       devDependencies: { typescript: "^5.0.0" }
     }))
-    mockFs.access.mockRejectedValue(new Error("ENOENT"))
     const info = await getProjectInfo("/test")
     expect(info.hasTypeScript).toBe(true)
   })
@@ -51,7 +48,7 @@ describe("get-project-info", () => {
   it("should return unknown for missing package.json", async () => {
     mockFs.readFile.mockRejectedValue(new Error("ENOENT"))
     const info = await getProjectInfo("/test")
-    expect(info.framework).toBe("unknown")
+    expect(info.framework.name).toBe("manual")
     expect(info.hasNativeWind).toBe(false)
   })
 

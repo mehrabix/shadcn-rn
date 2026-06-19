@@ -3,26 +3,26 @@ import { preflightAdd, preflightInit, preflightBuild } from "../../src/preflight
 
 describe("preflights", () => {
   describe("preflightAdd", () => {
-    it("should return issues for missing package.json", async () => {
+    it("should fail for missing package.json", async () => {
       const result = await preflightAdd("/nonexistent")
-      expect(result.valid).toBe(false)
-      expect(result.issues.length).toBeGreaterThan(0)
+      expect(result.passed).toBe(false)
+      expect(Object.keys(result.errors).length).toBeGreaterThan(0)
     })
   })
 
   describe("preflightInit", () => {
-    it("should return issues for missing package.json", async () => {
+    it("should fail for missing package.json", async () => {
       const result = await preflightInit("/nonexistent")
-      expect(result.valid).toBe(false)
-      expect(result.issues.length).toBeGreaterThan(0)
+      expect(result.passed).toBe(false)
+      expect(Object.keys(result.errors).length).toBeGreaterThan(0)
     })
   })
 
   describe("preflightBuild", () => {
-    it("should return issues for missing registry.json", async () => {
+    it("should fail for missing registry.json", async () => {
       const result = await preflightBuild("/nonexistent")
-      expect(result.valid).toBe(false)
-      expect(result.issues.length).toBeGreaterThan(0)
+      expect(result.passed).toBe(false)
+      expect(Object.keys(result.errors).length).toBeGreaterThan(0)
     })
   })
 })
