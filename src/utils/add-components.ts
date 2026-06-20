@@ -13,6 +13,7 @@ import { transform } from "./transformers"
 import { spinner } from "./spinner"
 import { logger } from "./logger"
 import { getWorkspaceConfig, findCommonRoot, findPackageRoot } from "./get-config"
+import { updateAppIndex } from "./update-app-index"
 import { updateCss } from "./updaters/update-css"
 import { updateDependencies } from "./updaters/update-dependencies"
 import { updateEnvVars } from "./updaters/update-env-vars"
@@ -131,6 +132,13 @@ async function addProjectComponents(
     overwrite: options.overwrite,
     config,
   })
+
+  for (const file of tree.files ?? []) {
+    if (file.type === "registry:ui" || file.type === "registry:component") {
+      const filePath = file.target || file.path
+      await updateAppIndex(cwd, filePath)
+    }
+  }
 
   await updateCss(tree.css, config, {
     silent: options.silent,
