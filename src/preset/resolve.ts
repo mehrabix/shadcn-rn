@@ -75,11 +75,11 @@ export async function resolveProjectPreset(config: Config) {
     return { code: null, fallbacks: [], values: null }
   }
 
-  const cssState = await readCssState(config.resolvedPaths.tailwindCss)
+  const cssState = await readCssState(config.resolvedPaths.nativewindCss)
 
   const baseColor = asPresetValue<PresetConfig["baseColor"]>(
     PRESET_BASE_COLOR_SET,
-    config.tailwind?.baseColor
+    config.nativewind?.baseColor
   )
   const theme = matchTheme(cssState)
   const chartColor = matchChartColor(cssState)

@@ -1,7 +1,7 @@
 import { type Transformer } from "./index"
 
 export const transformTwPrefixes: Transformer = async ({ sourceFile, config }) => {
-  const prefix = config.tailwind?.prefix
+  const prefix = config.nativewind?.prefix
   if (!prefix) {
     return sourceFile
   }
