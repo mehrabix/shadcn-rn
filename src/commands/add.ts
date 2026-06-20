@@ -72,7 +72,7 @@ export const add = new Command()
           }
 
           const { init } = await import("./init")
-          await init({ cwd: options.cwd, force: true })
+          await init.parseAsync(["node", "init", "-c", options.cwd, "-y"])
           config = await getConfig(options.cwd)
         }
       }
@@ -159,9 +159,7 @@ export const add = new Command()
         silent: options.silent,
       }).start()
 
-      await addComponents({
-        config,
-        components: options.components!,
+      await addComponents(options.components!, config, {
         overwrite: options.overwrite,
         silent: options.silent,
       })

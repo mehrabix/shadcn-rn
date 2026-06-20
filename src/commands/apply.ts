@@ -79,11 +79,8 @@ export const apply = new Command()
         if (componentsToInstall.length > 0) {
           info(`Installing ${componentsToInstall.length} components...`)
           const { addComponents } = await import("../utils/add-components")
-          await addComponents({
-            config,
-            components: componentsToInstall,
+          await addComponents(componentsToInstall, config, {
             overwrite: options.force,
-            yes: options.yes,
             silent: true,
           })
         }

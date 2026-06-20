@@ -100,9 +100,7 @@ export const init = new Command()
         silent: options.silent,
       }).start()
 
-      await addComponents({
-        config,
-        components: ["button"],
+      await addComponents(["button"], config, {
         overwrite: true,
         silent: true,
       })

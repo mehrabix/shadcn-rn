@@ -94,9 +94,25 @@ async function addProjectComponents(
 
   registrySpinner?.succeed()
 
-  await updateDependencies(tree.dependencies, tree.devDependencies, config, {
-    silent: options.silent,
-  })
+  const cwd = config.resolvedPaths.cwd
+  const packageManager = await getPackageManager(cwd)
+
+  if (tree.dependencies?.length) {
+    await updateDependencies(tree.dependencies, {
+      packageManager,
+      cwd,
+      silent: options.silent,
+    })
+  }
+
+  if (tree.devDependencies?.length) {
+    await updateDependencies(tree.devDependencies, {
+      packageManager,
+      dev: true,
+      cwd,
+      silent: options.silent,
+    })
+  }
 
   await updateTailwindConfig(tree.tailwind?.config, config, {
     silent: options.silent,
@@ -110,21 +126,14 @@ async function addProjectComponents(
     silent: options.silent,
   })
 
-  await updateFiles(tree.files, config, {
+  await updateFiles(tree.files ?? [], {
+    cwd,
     overwrite: options.overwrite,
-    silent: options.silent,
-    path: options.path,
+    config,
   })
 
-  const overwriteCssVars = tree.cssVars
-    ? (options.overwriteCssVars ?? false)
-    : undefined
   await updateCss(tree.css, config, {
     silent: options.silent,
-    cssVars: tree.cssVars,
-    cleanupDefaultNextStyles: options.isNewProject,
-    overwriteCssVars,
-    tailwindConfig: tree.tailwind?.config,
   })
 
   if (tree.docs) {
@@ -174,10 +183,6 @@ async function addWorkspaceComponents(
 
   registrySpinner?.succeed()
 
-  const filesCreated: string[] = []
-  const filesUpdated: string[] = []
-  const filesSkipped: string[] = []
-
   const rootSpinner = spinner(`Installing components.`, {
     silent: options.silent,
   })?.start()
@@ -188,9 +193,25 @@ async function addWorkspaceComponents(
     mainTargetConfig.resolvedPaths.ui
   )
 
-  await updateDependencies(tree.dependencies, tree.devDependencies, mainTargetConfig, {
-    silent: true,
-  })
+  const cwd = config.resolvedPaths.cwd
+  const packageManager = await getPackageManager(cwd)
+
+  if (tree.dependencies?.length) {
+    await updateDependencies(tree.dependencies, {
+      packageManager,
+      cwd,
+      silent: true,
+    })
+  }
+
+  if (tree.devDependencies?.length) {
+    await updateDependencies(tree.devDependencies, {
+      packageManager,
+      dev: true,
+      cwd,
+      silent: true,
+    })
+  }
 
   await updateTailwindConfig(tree.tailwind?.config, mainTargetConfig, {
     silent: true,
@@ -247,75 +268,20 @@ async function addWorkspaceComponents(
   for (const targetKey of Array.from(filesByTarget.keys())) {
     const targetFiles = filesByTarget.get(targetKey)!
     const targetConfig = getTargetConfigForKey(targetKey)
+    const targetCwd = targetConfig.resolvedPaths.cwd
 
-    const files = await updateFiles(targetFiles, targetConfig, {
+    await updateFiles(targetFiles, {
+      cwd: targetCwd,
       overwrite: options.overwrite,
-      silent: true,
-      isWorkspace: true,
-      path: options.path,
+      config: targetConfig,
     })
-
-    filesCreated.push(...(files.filesCreated || []))
-    filesUpdated.push(...(files.filesUpdated || []))
-    filesSkipped.push(...(files.filesSkipped || []))
   }
 
-  const overwriteCssVars = tree.cssVars
-    ? (options.overwriteCssVars ?? false)
-    : undefined
   await updateCss(tree.css, mainTargetConfig, {
     silent: true,
-    cssVars: tree.cssVars,
-    overwriteCssVars,
-    tailwindConfig: tree.tailwind?.config,
   })
 
   rootSpinner?.succeed()
-
-  const dedupedCreated = Array.from(new Set(filesCreated)).sort()
-  const dedupedUpdated = Array.from(
-    new Set(filesUpdated.filter((file) => !filesCreated.includes(file)))
-  ).sort()
-  const dedupedSkipped = Array.from(new Set(filesSkipped)).sort()
-
-  if (dedupedCreated.length) {
-    const s = spinner(
-      `Created ${dedupedCreated.length} ${
-        dedupedCreated.length === 1 ? "file" : "files"
-      }:`,
-      { silent: options.silent }
-    )
-    s?.succeed()
-    for (const file of dedupedCreated) {
-      logger.log(`  - ${file}`)
-    }
-  }
-
-  if (dedupedUpdated.length) {
-    const s = spinner(
-      `Updated ${dedupedUpdated.length} ${
-        dedupedUpdated.length === 1 ? "file" : "files"
-      }:`,
-      { silent: options.silent }
-    )
-    s?.info()
-    for (const file of dedupedUpdated) {
-      logger.log(`  - ${file}`)
-    }
-  }
-
-  if (dedupedSkipped.length) {
-    const s = spinner(
-      `Skipped ${dedupedSkipped.length} ${
-        dedupedSkipped.length === 1 ? "file" : "files"
-      }: (use --overwrite to overwrite)`,
-      { silent: options.silent }
-    )
-    s?.info()
-    for (const file of dedupedSkipped) {
-      logger.log(`  - ${file}`)
-    }
-  }
 
   if (tree.docs) {
     logger.info(tree.docs)
