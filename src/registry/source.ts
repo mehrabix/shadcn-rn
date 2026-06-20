@@ -35,9 +35,13 @@ export async function resolveSource(
   const parsed = parseRegistryAndItemFromString(input)
   if (parsed) {
     const resolvedConfig = configWithDefaults(config)
+    const registries = resolvedConfig.registries
+    if (!registries) {
+      return { type: "unknown", items: [] }
+    }
     const urlInfo = buildUrlAndHeadersForRegistryItem(
       input,
-      resolvedConfig.registries
+      registries
     )
 
     if (urlInfo) {

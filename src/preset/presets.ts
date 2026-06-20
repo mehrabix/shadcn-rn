@@ -255,7 +255,7 @@ export async function resolveRegistryBaseConfig(
   )
   shadowConfig = updatedConfig
 
-  buildUrlAndHeadersForRegistryItem(initUrl, shadowConfig)
+  buildUrlAndHeadersForRegistryItem(initUrl, shadowConfig.registries!)
 
   const [item] = await getRegistryItems([initUrl], {
     config: shadowConfig,

@@ -1,12 +1,18 @@
 import { existsSync, promises as fs } from "fs"
 import path from "path"
-import { getConfig } from "../utils/get-config"
-import { log, info, success, error as logError, warn } from "../utils/logger"
+import { getConfig, type Config } from "../utils/get-config"
+import { log, info, success, error as logError } from "../utils/logger"
 import { highlighter } from "../utils/highlighter"
+import { transform } from "../utils/transformers"
+import { transformImport } from "../utils/transformers/transform-import"
+import { transformCssVars } from "../utils/transformers/transform-css-vars"
+import { transformReactNative } from "../utils/transformers/transform-react-native"
+import { transformCleanup } from "../utils/transformers/transform-cleanup"
 import { Command } from "commander"
+import { diffLines, type Change } from "diff"
 import { z } from "zod"
 
-export const diffOptionsSchema = z.object({
+const diffOptionsSchema = z.object({
   component: z.string().optional(),
   yes: z.boolean(),
   cwd: z.string(),
@@ -36,7 +42,15 @@ export const diff = new Command()
         process.exit(1)
       }
 
-      const config = await getConfig(cwd)
+      const config = await getConfig(cwd).catch(() => null)
+      if (!config) {
+        logError(
+          `Configuration is missing. Please run ${highlighter.success(
+            "init"
+          )} to create a components.json file.`
+        )
+        process.exit(1)
+      }
 
       const { getRegistryItems } = await import("../registry/api")
 
@@ -53,17 +67,13 @@ export const diff = new Command()
 
         const componentsWithUpdates: Array<{
           name: string
-          differences: string[]
+          changes: { filePath: string; patch: Change[] }[]
         }> = []
 
         for (const comp of installedComponents) {
-          try {
-            const differences = await checkComponentDiff(comp, config)
-            if (differences.length > 0) {
-              componentsWithUpdates.push({ name: comp, differences })
-            }
-          } catch {
-            // Skip components that can't be fetched
+          const changes = await diffComponent(comp, config)
+          if (changes.length > 0) {
+            componentsWithUpdates.push({ name: comp, changes })
           }
         }
 
@@ -72,13 +82,11 @@ export const diff = new Command()
           process.exit(0)
         }
 
-        info(
-          `\nThe following components have updates available:`
-        )
+        info("The following components have updates available:")
         for (const component of componentsWithUpdates) {
           log(`- ${highlighter.info(component.name)}`)
-          for (const diff of component.differences) {
-            log(`  ${diff}`)
+          for (const change of component.changes) {
+            log(`  - ${change.filePath}`)
           }
         }
         info("")
@@ -90,16 +98,17 @@ export const diff = new Command()
         process.exit(0)
       }
 
-      const differences = await checkComponentDiff(options.component, config)
+      const changes = await diffComponent(options.component, config)
 
-      if (differences.length === 0) {
+      if (changes.length === 0) {
         success(`No updates found for ${options.component}.`)
         process.exit(0)
       }
 
-      info(`Differences for ${highlighter.info(options.component)}:`)
-      for (const diff of differences) {
-        log(`  ${diff}`)
+      for (const change of changes) {
+        info(`- ${change.filePath}`)
+        printDiff(change.patch)
+        info("")
       }
     } catch (err) {
       logError(`Failed to check differences: ${err}`)
@@ -118,74 +127,67 @@ async function findInstalledComponents(uiPath: string): Promise<string[]> {
   }
 }
 
-async function checkComponentDiff(
+async function diffComponent(
   componentName: string,
-  config: ReturnType<typeof getConfig> extends Promise<infer T> ? T : never
-): Promise<string[]> {
-  const differences: string[] = []
+  config: Config
+): Promise<{ filePath: string; patch: Change[] }[]> {
+  const { getRegistryItems } = await import("../registry/api")
 
-  try {
-    const { getRegistryItems } = await import("../registry/api")
-    const items = await getRegistryItems([`components:${componentName}`])
-
-    if (items.length === 0) {
-      differences.push(`Component "${componentName}" not found in registry`)
-      return differences
-    }
-
-    const item = items[0]
-    if (!item.files || item.files.length === 0) {
-      return differences
-    }
-
-    const uiPath = path.resolve(
-      config.resolvedPaths.cwd,
-      "src",
-      "components",
-      "ui"
-    )
-
-    for (const file of item.files) {
-      const localPath = path.join(uiPath, file.path || `${componentName}.tsx`)
-      let localContent: string | null = null
-
-      try {
-        localContent = await fs.readFile(localPath, "utf-8")
-      } catch {
-        differences.push(
-          `File ${file.path || `${componentName}.tsx`} exists in registry but not locally`
-        )
-        continue
-      }
-
-      if (file.content && localContent) {
-        const localLines = localContent.split("\n")
-        const remoteLines = file.content.split("\n")
-
-        const maxLen = Math.max(localLines.length, remoteLines.length)
-        let diffCount = 0
-
-        for (let i = 0; i < maxLen; i++) {
-          const localLine = localLines[i] || ""
-          const remoteLine = remoteLines[i] || ""
-          if (localLine !== remoteLine) {
-            diffCount++
-            if (diffCount <= 3) {
-              differences.push(
-                `Line ${i + 1}: local differs from registry`
-              )
-            }
-          }
-        }
-
-        if (diffCount > 3) {
-          differences.push(`... and ${diffCount - 3} more differences`)
-        }
-      }
-    }
-  } catch (err) {
-    differences.push(`Error fetching registry: ${err}`)
+  const items = await getRegistryItems([`components:${componentName}`])
+  if (items.length === 0) {
+    return []
   }
 
-  return differences
+  const item = items[0]
+  if (!item.files || item.files.length === 0) {
+    return []
+  }
+
+  const changes: { filePath: string; patch: Change[] }[] = []
+
+  for (const file of item.files) {
+    if (!file.content) continue
+
+    const localPath = path.resolve(
+      config.resolvedPaths.components,
+      file.path || `${componentName}.tsx`
+    )
+
+    if (!existsSync(localPath)) continue
+
+    const localContent = await fs.readFile(localPath, "utf-8")
+
+    let registryContent: string
+    try {
+      registryContent = (await transform(
+        {
+          filename: file.path,
+          raw: file.content,
+          config,
+        },
+        [transformImport, transformCssVars, transformReactNative, transformCleanup]
+      )) as string
+    } catch {
+      registryContent = file.content
+    }
+
+    const patch = diffLines(registryContent, localContent)
+    if (patch.length > 1) {
+      changes.push({ filePath: localPath, patch })
+    }
+  }
+
+  return changes
+}
+
+function printDiff(diff: Change[]) {
+  for (const part of diff) {
+    if (part.added) {
+      process.stdout.write(highlighter.success(part.value))
+    } else if (part.removed) {
+      process.stdout.write(highlighter.error(part.value))
+    } else {
+      process.stdout.write(part.value)
+    }
+  }
 }

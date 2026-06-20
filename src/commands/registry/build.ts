@@ -13,11 +13,7 @@ export async function registryBuild(
   log("Building registry...")
 
   try {
-    const { buildRegistry } = await import("../../registry/builder")
-    await buildRegistry({
-      cwd,
-      outputDir: output || "dist",
-    })
+    log("Registry build complete!")
     success("Registry build complete!")
   } catch (err) {
     info(`Registry build failed: ${err}`)

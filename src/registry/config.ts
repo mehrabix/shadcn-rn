@@ -1,16 +1,32 @@
-import { BUILTIN_REGISTRIES } from "./constants"
+import { BUILTIN_REGISTRIES, FALLBACK_STYLE } from "./constants"
+import { configSchema } from "./schema"
+import type { Config } from "./schema"
+import { createConfig, type DeepPartial } from "../utils/get-config"
+import deepmerge from "deepmerge"
 
-export interface RegistryConfig {
-  registries: Record<string, string | { url: string; params?: Record<string, string>; headers?: Record<string, string> }>
+function resolveStyleFromConfig(config: DeepPartial<Config>) {
+  if (!config.style) {
+    return FALLBACK_STYLE
+  }
+
+  return config.style
 }
 
-export function configWithDefaults(
-  config: Partial<RegistryConfig>
-): RegistryConfig {
-  return {
-    registries: {
-      ...BUILTIN_REGISTRIES,
-      ...config.registries,
-    },
+export function configWithDefaults(config?: DeepPartial<Config>) {
+  const baseConfig = createConfig({
+    style: FALLBACK_STYLE,
+    registries: BUILTIN_REGISTRIES,
+  })
+
+  if (!config) {
+    return baseConfig
   }
+
+  return configSchema.parse(
+    deepmerge(baseConfig, {
+      ...config,
+      style: resolveStyleFromConfig(config),
+      registries: { ...BUILTIN_REGISTRIES, ...config.registries },
+    })
+  )
 }

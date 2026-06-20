@@ -336,6 +336,7 @@ export function createConfig(partial?: DeepPartial<Config>): Config {
       cssVariables: false,
     },
     tsx: true,
+    rsc: false,
     aliases: {
       components: "",
       utils: "",
@@ -382,6 +383,7 @@ export async function createConfigFile(
   const config: RawConfig = {
     style: options.style || "default",
     tsx: options.tsx !== false,
+    rsc: false,
     nativewind: {
       baseColor: options.baseColor || "neutral",
       cssVariables: true,

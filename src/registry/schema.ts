@@ -25,6 +25,7 @@ export const rawConfigSchema = z
     $schema: z.string().optional(),
     style: z.string().default("default"),
     tsx: z.coerce.boolean().default(true),
+    rsc: z.coerce.boolean().default(false),
     nativewind: z
       .object({
         config: z.string().optional(),
@@ -43,6 +44,18 @@ export const rawConfigSchema = z
         hooks: z.string().optional(),
       })
       .default({}),
+    iconLibrary: z.string().optional(),
+    rtl: z.coerce.boolean().default(false).optional(),
+    menuColor: z
+      .enum([
+        "default",
+        "inverted",
+        "default-translucent",
+        "inverted-translucent",
+      ])
+      .default("default")
+      .optional(),
+    menuAccent: z.enum(["subtle", "bold"]).default("subtle").optional(),
     registries: registryConfigSchema.optional(),
   })
   .strict()
@@ -63,6 +76,10 @@ export const configSchema = rawConfigSchema.extend({
 })
 
 export type Config = z.infer<typeof configSchema>
+
+export type RegistryConfig = {
+  registries: z.infer<typeof registryConfigSchema>
+}
 
 export const registryItemTypeSchema = z.enum([
   "registry:lib",
@@ -260,6 +277,8 @@ export const searchResultItemSchema = z.object({
   addCommandArgument: z.string(),
 })
 
+export type SearchResultItem = z.infer<typeof searchResultItemSchema>
+
 export const searchResultsSchema = z.object({
   pagination: z.object({
     total: z.number(),
@@ -268,7 +287,61 @@ export const searchResultsSchema = z.object({
     hasMore: z.boolean(),
   }),
   items: z.array(searchResultItemSchema),
+  errors: z.array(
+    z.object({
+      registry: z.string(),
+      message: z.string(),
+    })
+  ).optional(),
 })
+
+export const iconsSchema = z.record(
+  z.string(),
+  z.record(z.string(), z.string())
+)
+
+export const registriesIndexSchema = z.record(
+  z.string().regex(/^@[a-zA-Z0-9][a-zA-Z0-9-_]*$/),
+  z.string()
+)
+
+export const registriesSchema = z.array(
+  z.object({
+    name: z.string(),
+    homepage: z.string().optional(),
+    url: z.string(),
+    description: z.string().optional(),
+  })
+)
+
+export const presetSchema = z.object({
+  name: z.string(),
+  title: z.string(),
+  description: z.string(),
+  base: z.string(),
+  style: z.string(),
+  baseColor: z.string(),
+  theme: z.string(),
+  iconLibrary: z.string(),
+  font: z.string(),
+  rtl: z.coerce.boolean().default(false),
+  menuAccent: z.enum(["subtle", "bold"]),
+  menuColor: z.enum([
+    "default",
+    "inverted",
+    "default-translucent",
+    "inverted-translucent",
+  ]),
+  radius: z.string(),
+})
+
+export type Preset = z.infer<typeof presetSchema>
+
+export const configJsonSchema = z.object({
+  presets: z.array(presetSchema),
+})
+
+export type ConfigJson = z.infer<typeof configJsonSchema>
 
 export const workspaceConfigSchema = z.object({
   components: configSchema.nullable().optional(),

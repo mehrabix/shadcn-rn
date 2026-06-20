@@ -33,3 +33,17 @@ export function error(message: string): void {
 export function bold(message: string): string {
   return `${COLORS.bright}${message}${COLORS.reset}`
 }
+
+export function br(): void {
+  console.log("")
+}
+
+export const logger: {
+  log: (message: string) => void
+  info: (message: string) => void
+  success: (message: string) => void
+  warn: (message: string) => void
+  error: (message: string) => void
+  bold: (message: string) => string
+  break: () => void
+} = { log, info, success, warn, error, bold, break: br }

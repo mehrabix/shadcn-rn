@@ -1,75 +1,153 @@
+import { existsSync } from "fs"
 import path from "path"
-import { getConfig } from "../utils/get-config"
-import { log, info, success, error as logError } from "../utils/logger"
+import { decodePreset, type PresetConfig } from "../preset/preset"
+import { log, info, error as logError } from "../utils/logger"
 import { highlighter } from "../utils/highlighter"
+import { getConfig } from "../utils/get-config"
+import { getProjectInfo } from "../utils/get-project-info"
 import { Command } from "commander"
-import { z } from "zod"
 
-export const presetOptionsSchema = z.object({
-  cwd: z.string(),
-  name: z.string().optional(),
-  decode: z.string().optional(),
-  list: z.boolean(),
-})
+type PresetValues = Omit<PresetConfig, "chartColor"> & {
+  chartColor: NonNullable<PresetConfig["chartColor"]>
+}
 
-export const preset = new Command()
-  .name("preset")
-  .description("manage presets")
+type PresetDecodeResult = {
+  code: string
+  version: string
+  values: PresetValues
+  derived: string[]
+}
+
+function decodePresetCode(code: string): PresetDecodeResult {
+  const decoded = decodePreset(code)
+
+  if (!decoded) {
+    throw new Error(`Invalid preset code: ${code}`)
+  }
+
+  const derived: string[] = []
+  const chartColor = (decoded.chartColor ?? decoded.theme) as PresetValues["chartColor"]
+
+  if (!decoded.chartColor) {
+    derived.push("chartColor")
+  }
+
+  return {
+    code,
+    version: code[0],
+    values: {
+      ...decoded,
+      chartColor,
+    },
+    derived,
+  }
+}
+
+function printPresetInfo(result: PresetDecodeResult) {
+  info(`Preset: ${highlighter.info(result.code)}`)
+  log(`  Version: ${result.version}`)
+  log(`  Style: ${result.values.style}`)
+  log(`  Base Color: ${result.values.baseColor}`)
+  log(`  Theme: ${result.values.theme}`)
+  log(`  Font: ${result.values.font}`)
+  log(`  Radius: ${result.values.radius}`)
+  if (result.values.iconLibrary) {
+    log(`  Icon Library: ${result.values.iconLibrary}`)
+  }
+  if (result.derived.length > 0) {
+    info(`  Derived: ${result.derived.join(", ")}`)
+  }
+}
+
+function handlePresetError(error: unknown) {
+  if (error instanceof Error) {
+    logError(error.message)
+  }
+  process.exit(1)
+}
+
+const decode = new Command()
+  .name("decode")
+  .description("decode a preset code")
+  .argument("<code>", "the preset code to decode")
+  .option("--json", "output as JSON.", false)
+  .action((code, opts) => {
+    try {
+      const result = decodePresetCode(code)
+
+      if (opts.json) {
+        console.log(
+          JSON.stringify(
+            {
+              code: result.code,
+              version: result.version,
+              values: result.values,
+              derived: result.derived,
+            },
+            null,
+            2
+          )
+        )
+        return
+      }
+
+      printPresetInfo(result)
+    } catch (error) {
+      handlePresetError(error)
+    }
+  })
+
+const resolve = new Command()
+  .name("resolve")
+  .alias("info")
+  .description("resolve the current project's preset")
   .option(
     "-c, --cwd <cwd>",
     "the working directory. defaults to the current directory.",
     process.cwd()
   )
-  .option("--name <name>", "preset name to apply")
-  .option("--decode <code>", "decode a preset code")
-  .option("--list", "list all available presets", false)
+  .option("--json", "output as JSON.", false)
   .action(async (opts) => {
     try {
-      const options = presetOptionsSchema.parse({
-        ...opts,
-        cwd: path.resolve(opts.cwd),
-      })
+      const cwd = path.resolve(opts.cwd)
 
-      if (options.decode) {
-        const { decodePresetUrl } = await import("../preset/preset")
-        try {
-          const state = decodePresetUrl(options.decode)
-          if (state) {
-            info(`Decoded preset:`)
-            log(`  Style: ${highlighter.info(state.style || "default")}`)
-            log(`  Base Color: ${highlighter.info(state.baseColor || "neutral")}`)
-            log(`  Font: ${highlighter.info(state.font || "default")}`)
-            log(`  Radius: ${highlighter.info(String(state.radius || 0.5))}`)
-          } else {
-            logError("Could not decode preset code")
-          }
-        } catch (err) {
-          logError(`Decode failed: ${err}`)
+      const config = await getConfig(cwd).catch(() => null)
+      if (!config) {
+        if (opts.json) {
+          console.log(JSON.stringify(null, null, 2))
+          return
         }
+        log("No components.json found.")
         return
       }
 
-      if (options.list || !options.name) {
-        const { presets } = await import("../preset/defaults")
-        info("Available presets:")
-        for (const p of presets) {
-          log(`  ${highlighter.info(p.name)} - ${p.description}`)
-        }
+      if (opts.json) {
+        console.log(
+          JSON.stringify(
+            {
+              style: config.style,
+              baseColor: config.nativewind?.baseColor,
+            },
+            null,
+            2
+          )
+        )
         return
       }
 
-      const { getPresetByName } = await import("../preset/defaults")
-      const presetConfig = getPresetByName(options.name)
-
-      if (presetConfig) {
-        info(`Preset: ${highlighter.info(presetConfig.name)}`)
-        log(`  Description: ${presetConfig.description}`)
-        log(`  URL: ${presetConfig.url}`)
-      } else {
-        logError(`Preset "${options.name}" not found`)
-      }
+      info(`Style: ${highlighter.info(config.style)}`)
+      info(`Base Color: ${highlighter.info(config.nativewind?.baseColor || "neutral")}`)
     } catch (err) {
-      logError(`Failed: ${err}`)
+      logError(`Failed to resolve preset: ${err}`)
       process.exit(1)
     }
+  })
+
+export const preset = new Command()
+  .name("preset")
+  .description("manage presets")
+  .addCommand(decode)
+  .addCommand(resolve)
+  .action(() => {
+    preset.outputHelp()
   })

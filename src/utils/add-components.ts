@@ -75,7 +75,7 @@ async function addProjectComponents(
 
   let tree: ResolvedItemsTree | null = null
   try {
-    tree = await resolveRegistryTree(components, configWithDefaults(config))
+    tree = await resolveRegistryTree(components, { config: configWithDefaults(config) })
   } catch (error) {
     registrySpinner?.fail()
     throw error
@@ -123,7 +123,7 @@ async function addProjectComponents(
     silent: options.silent,
   })
 
-  await updateFonts(tree.fonts, config, {
+  await updateFonts(tree.fonts?.map(f => ({ name: f.name, family: f.font.family, variable: f.font.variable })), config, {
     silent: options.silent,
   })
 
@@ -171,7 +171,7 @@ async function addWorkspaceComponents(
 
   let tree: ResolvedItemsTree | null = null
   try {
-    tree = await resolveRegistryTree(components, configWithDefaults(config))
+    tree = await resolveRegistryTree(components, { config: configWithDefaults(config) })
   } catch (error) {
     registrySpinner?.fail()
     throw error
@@ -231,7 +231,7 @@ async function addWorkspaceComponents(
     })
   }
 
-  await updateFonts(tree.fonts, config, {
+  await updateFonts(tree.fonts?.map(f => ({ name: f.name, family: f.font.family, variable: f.font.variable })), config, {
     silent: true,
   })
 

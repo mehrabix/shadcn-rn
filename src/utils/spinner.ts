@@ -10,7 +10,7 @@ export interface Spinner {
   clear: () => Spinner
 }
 
-export function createSpinner(text?: string): Spinner {
+export function createSpinner(text?: string, options?: { silent?: boolean }): Spinner {
   let currentText = text || ""
   let isRunning = false
   let interval: ReturnType<typeof setInterval> | null = null

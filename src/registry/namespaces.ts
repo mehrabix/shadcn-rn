@@ -28,7 +28,11 @@ export async function resolveRegistryNamespaces(
   const resolutions: NamespaceResolution[] = []
 
   for (const [namespace, items] of namespaceMap) {
-    const registryConfig = resolvedConfig.registries[namespace]
+    const registries = resolvedConfig.registries
+    if (!registries) {
+      continue
+    }
+    const registryConfig = registries[namespace]
     if (!registryConfig) {
       continue
     }
@@ -39,7 +43,7 @@ export async function resolveRegistryNamespaces(
       const fullName = `${namespace}/${itemName}`
       const urlInfo = buildUrlAndHeadersForRegistryItem(
         fullName,
-        resolvedConfig.registries
+        registries
       )
 
       if (urlInfo) {

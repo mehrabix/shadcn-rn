@@ -221,3 +221,37 @@ async function detectPackageManager(cwd: string): Promise<string> {
 
   return "npm"
 }
+
+export async function getProjectComponents(cwd: string): Promise<string[]> {
+  const { getConfig } = await import("./get-config")
+  const { getShadcnRegistryIndex } = await import("../registry/api")
+
+  try {
+    const existingConfig = await getConfig(cwd)
+    if (!existingConfig) {
+      return []
+    }
+
+    const uiDir = existingConfig.resolvedPaths.ui
+    if (!uiDir) {
+      return []
+    }
+
+    try {
+      await fs.access(uiDir)
+    } catch {
+      return []
+    }
+
+    const registryIndex = await getShadcnRegistryIndex()
+    const registryNames = new Set(registryIndex?.map((item) => item.name) ?? [])
+
+    const files = await fs.readdir(uiDir)
+    return files
+      .filter((f) => /\.(tsx|jsx)$/.test(f))
+      .map((f) => path.basename(f, path.extname(f)))
+      .filter((name) => registryNames.has(name))
+  } catch {
+    return []
+  }
+}

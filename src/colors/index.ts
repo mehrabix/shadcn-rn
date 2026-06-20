@@ -1,3 +1,8 @@
+import { neutral } from "./neutral"
+import { zinc } from "./zinc"
+import { slate } from "./slate"
+import { stone } from "./stone"
+
 export { neutral } from "./neutral"
 export { zinc } from "./zinc"
 export { slate } from "./slate"

@@ -1,46 +1,61 @@
-import * as fs from "fs/promises"
-import * as path from "path"
-import { log, info, success, error } from "../../utils/logger"
-import { validateRegistry } from "../../registry/validate"
+import path from "path"
+import { log, info, success, error as logError } from "../../utils/logger"
+import { highlighter } from "../../utils/highlighter"
+import { Command } from "commander"
+import { z } from "zod"
 
-export interface RegistryValidateOptions {
-  cwd: string
-  registry?: string
-}
+const validateOptionsSchema = z.object({
+  cwd: z.string(),
+  registry: z.string().optional(),
+})
 
-export async function registryValidate(
-  options: RegistryValidateOptions
-): Promise<void> {
-  const { cwd, registry } = options
+export const validate = new Command()
+  .name("validate")
+  .description("validate a registry")
+  .argument("[registry]", "path to registry JSON file")
+  .option(
+    "-c, --cwd <cwd>",
+    "the working directory. defaults to the current directory.",
+    process.cwd()
+  )
+  .action(async (registryArg: string | undefined, opts) => {
+    try {
+      const options = validateOptionsSchema.parse({
+        cwd: path.resolve(opts.cwd),
+        registry: registryArg,
+      })
 
-  log("Validating registry...")
+      const { validateRegistry } = await import("../../registry/validate")
+      const fs = await import("fs/promises")
 
-  try {
-    const registryPath = registry
-      ? path.resolve(cwd, registry)
-      : path.resolve(cwd, "registry.json")
+      const registryPath = options.registry
+        ? path.resolve(options.cwd, options.registry)
+        : path.resolve(options.cwd, "registry.json")
 
-    const content = await fs.readFile(registryPath, "utf-8")
-    const data = JSON.parse(content)
+      log(`Validating registry: ${highlighter.info(registryPath)}`)
 
-    const result = validateRegistry(data)
+      const content = await fs.readFile(registryPath, "utf-8")
+      const data = JSON.parse(content)
 
-    if (result.valid) {
-      success("Registry validation passed!")
-    } else {
-      error("Registry validation failed:")
-      for (const err of result.errors) {
-        info(`  - ${err}`)
+      const result = validateRegistry(data)
+
+      if (result.valid) {
+        success("Registry validation passed!")
+      } else {
+        logError("Registry validation failed:")
+        for (const err of result.errors) {
+          info(`  - ${err}`)
+        }
       }
-    }
 
-    if (result.warnings.length > 0) {
-      info("Warnings:")
-      for (const warn of result.warnings) {
-        info(`  - ${warn}`)
+      if (result.warnings.length > 0) {
+        info("Warnings:")
+        for (const warn of result.warnings) {
+          info(`  - ${warn}`)
+        }
       }
+    } catch (err) {
+      logError(`Registry validation failed: ${err}`)
+      process.exit(1)
     }
-  } catch (err) {
-    error(`Registry validation failed: ${err}`)
-  }
-}
+  })

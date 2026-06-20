@@ -11,7 +11,7 @@ export interface UpdateFilesOptions {
 }
 
 export async function updateFiles(
-  files: Array<{ path: string; content: string; target?: string }>,
+  files: Array<{ path: string; content?: string; target?: string }>,
   options: UpdateFilesOptions
 ): Promise<void> {
   for (const file of files) {
@@ -33,21 +33,29 @@ export async function updateFiles(
 
     let content = file.content
 
-    if (options.config) {
+    if (!content) {
+      continue
+    }
+
+    if (options.config && content) {
       try {
         const transformOpts: TransformOpts = {
           filename: file.target || file.path,
-          raw: file.content,
+          raw: content,
           config: options.config,
           transformJsx: false,
         }
-        content = await transform(transformOpts)
+        const transformed = await transform(transformOpts)
+        if (typeof transformed === "string") {
+          content = transformed
+        }
       } catch {
         // If transform fails, use original content
-        content = file.content
       }
     }
 
-    await fs.writeFile(targetPath, content)
+    if (content) {
+      await fs.writeFile(targetPath, content)
+    }
   }
 }

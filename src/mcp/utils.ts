@@ -1,6 +1,6 @@
 import { getRegistriesConfig } from "../registry"
 import { findUnknownSearchTypes, SEARCHABLE_TYPES } from "../registry/search"
-import { registryItemSchema, searchResultsSchema } from "../schema"
+import { registryItemSchema, searchResultsSchema } from "../registry/schema"
 import { getPackageManager } from "../utils/get-package-manager"
 import { z } from "zod"
 

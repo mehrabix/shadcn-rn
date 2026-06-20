@@ -1,41 +1,78 @@
 import path from "path"
-import { getConfig } from "../utils/get-config"
+import { preflightApply } from "../preflights"
+import { getConfig, createConfigFile } from "../utils/get-config"
+import { addComponents } from "../utils/add-components"
+import { getProjectInfo, getProjectComponents } from "../utils/get-project-info"
 import { log, info, success, error as logError, warn } from "../utils/logger"
+import { spinner } from "../utils/spinner"
 import { highlighter } from "../utils/highlighter"
 import { Command } from "commander"
 import { z } from "zod"
+import * as ERRORS from "../utils/errors"
 
 export const applyOptionsSchema = z.object({
   cwd: z.string(),
   preset: z.string().optional(),
-  only: z.array(z.string()).optional(),
-  force: z.boolean(),
+  only: z.union([z.boolean(), z.string()]).optional(),
   yes: z.boolean(),
+  silent: z.boolean(),
 })
 
 export const apply = new Command()
   .name("apply")
   .description("apply a preset to your project")
+  .argument("[preset]", "the preset to apply")
+  .option("--preset <preset>", "the preset to apply")
+  .option("--only [parts]", "apply only parts of a preset: theme, font")
+  .option("-y, --yes", "skip confirmation prompt.", false)
   .option(
     "-c, --cwd <cwd>",
     "the working directory. defaults to the current directory.",
     process.cwd()
   )
-  .option("--preset <name>", "the preset to apply")
-  .option("--only <types...>", "only apply specific types")
-  .option("--force", "force apply.", false)
-  .option("-y, --yes", "skip confirmation prompt.", false)
-  .action(async (opts) => {
+  .option("-s, --silent", "mute output.", false)
+  .action(async (positionalPreset, opts) => {
     try {
       const options = applyOptionsSchema.parse({
         ...opts,
         cwd: path.resolve(opts.cwd),
+        preset: opts.preset ?? positionalPreset,
       })
 
-      const config = await getConfig(options.cwd)
+      const preset = options.preset?.trim()
 
-      let presetName = options.preset
-      if (!presetName) {
+      const preflight = await preflightApply(options.cwd)
+
+      if (preflight.errors[ERRORS.MISSING_DIR_OR_EMPTY_PROJECT]) {
+        logError(
+          `The ${highlighter.info(
+            "apply"
+          )} command only works in an existing project.`
+        )
+        logError(
+          `Run ${highlighter.info("shadcn-rn init")} first.`
+        )
+        process.exit(1)
+      }
+
+      if (preflight.errors[ERRORS.MISSING_CONFIG]) {
+        logError(
+          `No ${highlighter.info("components.json")} found at ${highlighter.info(
+            options.cwd
+          )}.`
+        )
+        logError(
+          `Run ${highlighter.info("shadcn-rn init")} first.`
+        )
+        process.exit(1)
+      }
+
+      const existingConfig = preflight.config
+      if (!existingConfig) {
+        process.exit(1)
+      }
+
+      if (!preset) {
         const prompts = (await import("prompts")).default
         const { selected } = await prompts({
           type: "select",
@@ -48,47 +85,76 @@ export const apply = new Command()
             { title: "vega", value: "vega" },
           ],
         })
-        presetName = selected
-      }
 
-      if (!presetName) {
-        warn("No preset selected. Exiting.")
-        process.exit(1)
-      }
-
-      info(`Applying preset: ${highlighter.info(presetName)}`)
-
-      const { getPresetByName } = await import("../preset/defaults")
-      const presetConfig = getPresetByName(presetName)
-
-      if (!presetConfig) {
-        logError(`Preset "${presetName}" not found`)
-        process.exit(1)
-      }
-
-      info(`Description: ${presetConfig.description}`)
-
-      const { resolvePreset } = await import("../preset/resolve")
-      const resolved = await resolvePreset(presetConfig.url)
-
-      if (resolved?.components && resolved.components.length > 0) {
-        const componentsToInstall = options.only && options.only.length > 0
-          ? resolved.components.filter((c) => options.only!.includes(c))
-          : resolved.components
-
-        if (componentsToInstall.length > 0) {
-          info(`Installing ${componentsToInstall.length} components...`)
-          const { addComponents } = await import("../utils/add-components")
-          await addComponents(componentsToInstall, config, {
-            overwrite: options.force,
-            silent: true,
-          })
+        if (!selected) {
+          warn("No preset selected. Exiting.")
+          process.exit(1)
         }
+
+        await applyPreset(options.cwd, selected, existingConfig, options)
+      } else {
+        await applyPreset(options.cwd, preset, existingConfig, options)
       }
 
-      success(`Preset "${presetName}" applied!`)
+      success("Preset applied successfully.")
     } catch (err) {
       logError(`Failed to apply preset: ${err}`)
       process.exit(1)
     }
   })
+
+async function applyPreset(
+  cwd: string,
+  presetName: string,
+  existingConfig: ReturnType<typeof getConfig> extends Promise<infer T> ? T : never,
+  options: { silent?: boolean; yes?: boolean }
+) {
+  const applySpinner = spinner("Applying preset...", {
+    silent: options.silent,
+  }).start()
+
+  try {
+    const components = await getProjectComponents(cwd)
+
+    if (components.length > 0 && !options.yes) {
+      applySpinner.stop()
+      const prompts = (await import("prompts")).default
+      const { proceed } = await prompts({
+        type: "confirm",
+        name: "proceed",
+        message: `This will re-install ${highlighter.info(
+          String(components.length)
+        )} components with the new preset. Continue?`,
+        initial: false,
+      })
+
+      if (!proceed) {
+        warn("Installation cancelled.")
+        process.exit(1)
+      }
+      applySpinner.start()
+    }
+
+    const { DEFAULT_PRESETS } = await import("../preset/defaults")
+    const presetConfig = DEFAULT_PRESETS[presetName]
+
+    if (presetConfig) {
+      info(`Applying preset: ${highlighter.info(presetConfig.title || presetName)}`)
+    } else {
+      info(`Applying preset: ${highlighter.info(presetName)}`)
+    }
+
+    if (components.length > 0) {
+      applySpinner.start("Re-installing components...")
+      await addComponents(components, existingConfig, {
+        overwrite: true,
+        silent: true,
+      })
+    }
+
+    applySpinner.succeed("Preset applied!")
+  } catch (err) {
+    applySpinner.fail(`Failed to apply preset: ${err}`)
+    throw err
+  }
+}

@@ -1,6 +1,6 @@
 import path from "path"
 import { preflightAdd } from "../preflights"
-import { getConfig, createConfig } from "../utils/get-config"
+import { getConfig } from "../utils/get-config"
 import { addComponents } from "../utils/add-components"
 import { getProjectInfo } from "../utils/get-project-info"
 import { log, info, success, error as logError, warn } from "../utils/logger"

@@ -14,6 +14,7 @@ import { transformRsc } from "./transform-rsc"
 import { transformRender } from "./transform-render"
 import { transformMenu } from "./transform-menu"
 import { transformAsChild } from "./transform-aschild"
+import { transformReactNative } from "./transform-react-native"
 import { Project, ScriptKind, type SourceFile } from "ts-morph"
 
 export type TransformContext = {
@@ -60,6 +61,7 @@ export async function transform(
     transformRender,
     transformMenu,
     transformAsChild,
+    transformReactNative,
     transformCleanup,
   ]
 ) {

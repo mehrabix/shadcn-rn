@@ -14,6 +14,18 @@ export async function resolveRegistryTree(
 ): Promise<ResolvedItemsTree> {
   const { config } = options
   const resolvedConfig = configWithDefaults(config)
+  const registries = resolvedConfig.registries
+  if (!registries) {
+    return {
+      dependencies: [],
+      devDependencies: [],
+      files: [],
+      tailwind: {},
+      cssVars: {},
+      css: {},
+      envVars: {},
+    }
+  }
 
   const visited = new Set<string>()
   const allItems: RegistryItem[] = []
@@ -24,7 +36,7 @@ export async function resolveRegistryTree(
     }
     visited.add(name)
 
-    const urlInfo = buildUrlAndHeadersForRegistryItem(name, resolvedConfig.registries)
+    const urlInfo = buildUrlAndHeadersForRegistryItem(name, registries!)
     if (!urlInfo) {
       return
     }
@@ -62,31 +74,31 @@ export async function resolveRegistryTree(
 
   for (const item of sortedItems) {
     if (item.dependencies) {
-      merged.dependencies = [...new Set([...merged.dependencies, ...item.dependencies])]
+      merged.dependencies = [...new Set([...merged.dependencies!, ...item.dependencies])]
     }
     if (item.devDependencies) {
-      merged.devDependencies = [...new Set([...merged.devDependencies, ...item.devDependencies])]
+      merged.devDependencies = [...new Set([...merged.devDependencies!, ...item.devDependencies])]
     }
     if (item.files) {
       for (const file of item.files) {
-        const existingIndex = merged.files.findIndex(
+        const existingIndex = merged.files!.findIndex(
           (f) => f.target === file.target || f.path === file.path
         )
         if (existingIndex >= 0) {
-          merged.files[existingIndex] = file
+          merged.files![existingIndex] = file
         } else {
-          merged.files.push(file)
+          merged.files!.push(file)
         }
       }
     }
     if (item.tailwind) {
-      merged.tailwind = deepMerge(merged.tailwind, item.tailwind)
+      merged.tailwind = deepMerge(merged.tailwind!, item.tailwind)
     }
     if (item.cssVars) {
-      merged.cssVars = deepMergeCssVars(merged.cssVars, item.cssVars)
+      merged.cssVars = deepMergeCssVars(merged.cssVars!, item.cssVars)
     }
     if (item.css) {
-      merged.css = deepMerge(merged.css, item.css)
+      merged.css = deepMerge(merged.css!, item.css)
     }
     if (item.envVars) {
       merged.envVars = { ...merged.envVars, ...item.envVars }

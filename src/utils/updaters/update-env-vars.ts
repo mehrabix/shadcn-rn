@@ -25,7 +25,7 @@ export async function updateEnvVars(
 
   const projectRoot = config.resolvedPaths.cwd
   let envFilePath = path.join(projectRoot, ".env.local")
-  const existingEnvFile = findExistingEnvFile(projectRoot)
+  const existingEnvFile = await findExistingEnvFile(projectRoot)
 
   if (existingEnvFile) {
     envFilePath = existingEnvFile

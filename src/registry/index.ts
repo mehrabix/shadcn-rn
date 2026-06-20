@@ -1,6 +1,5 @@
 export * from "./schema"
 export * from "./parser"
-export * from "./builder"
 export * from "./fetcher"
 export * from "./resolver"
 export * from "./loader"

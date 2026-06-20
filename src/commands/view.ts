@@ -54,7 +54,7 @@ export const view = new Command()
       if (item.files && item.files.length > 0) {
         log(`  Files:`)
         for (const file of item.files) {
-          log(`    ${file.path || file.name}`)
+          log(`    ${file.path}`)
         }
       }
     } catch (err) {

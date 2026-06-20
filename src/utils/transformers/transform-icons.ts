@@ -11,25 +11,24 @@ export const transformIcons: Transformer = async ({ sourceFile, config }) => {
   for (const element of sourceFile.getDescendantsOfKind(
     SyntaxKind.JsxSelfClosingElement
   )) {
-    if (element.getTagNameNode()?.getText() !== "IconPlaceholder") {
+    const tagName = element.getTagNameNode()?.getText()
+    if (tagName !== "IconPlaceholder") {
       continue
     }
 
-    const libraryPropAttr = element.getAttributes().find((attr) => {
-      if (attr.getKind() !== SyntaxKind.JsxAttribute) {
-        return false
-      }
+    const attributes = element.getAttributes()
+    for (const attr of attributes) {
+      if (attr.getKind() !== SyntaxKind.JsxAttribute) continue
       const jsxAttr = attr.asKindOrThrow(SyntaxKind.JsxAttribute)
-      return jsxAttr.getName() === iconLibrary
-    })
+      const nameNode = jsxAttr.getNameNode()
+      if (nameNode?.getText() !== iconLibrary) continue
 
-    if (libraryPropAttr && libraryPropAttr.getKind() === SyntaxKind.JsxAttribute) {
-      const jsxAttr = libraryPropAttr.asKindOrThrow(SyntaxKind.JsxAttribute)
       const initializer = jsxAttr.getInitializer()
       if (initializer?.getKind() === SyntaxKind.StringLiteral) {
         const iconName = initializer.asKindOrThrow(SyntaxKind.StringLiteral).getLiteralValue()
-        element.setTagNameNode(iconName)
-        element.removeAttributes()
+        if (typeof iconName === "string") {
+          element.replaceWithText(`<${iconName} />`)
+        }
       }
     }
   }

@@ -26,9 +26,10 @@ export class RegistryError extends Error {
       statusCode?: number
       context?: Record<string, unknown>
       suggestion?: string
+      cause?: unknown
     }
   ) {
-    super(message)
+    super(message, { cause: options?.cause })
     this.name = "RegistryError"
     this.code = code
     this.statusCode = options?.statusCode
@@ -110,7 +111,7 @@ export class RegistryLocalFileError extends RegistryError {
 }
 
 export class RegistryParseError extends RegistryError {
-  constructor(message: string, options?: { cause?: Error }) {
+  constructor(message: string, options?: { cause?: unknown }) {
     super(message, RegistryErrorCode.PARSE_ERROR, {
       cause: options?.cause,
     })
@@ -150,7 +151,7 @@ export class ConfigMissingError extends RegistryError {
 }
 
 export class ConfigParseError extends RegistryError {
-  constructor(message: string, options?: { cause?: Error }) {
+  constructor(message: string, options?: { cause?: unknown }) {
     super(message, RegistryErrorCode.CONFIG_PARSE_ERROR, {
       cause: options?.cause,
     })

@@ -106,7 +106,7 @@ export async function resolveProjectPreset(config: Config) {
   )
 
   const values = {
-    style,
+    style: style as PresetConfig["style"],
     baseColor: baseColor ?? defaults.baseColor,
     theme: theme ?? defaults.theme,
     chartColor: chartColor ?? defaults.chartColor,

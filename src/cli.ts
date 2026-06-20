@@ -14,6 +14,7 @@ import { view } from "./commands/view"
 import { migrate } from "./commands/migrate"
 import { preset } from "./commands/preset"
 import { mcp } from "./commands/mcp"
+import { registry } from "./commands/registry"
 
 const program = new Command()
 
@@ -35,5 +36,6 @@ program.addCommand(view)
 program.addCommand(migrate)
 program.addCommand(preset)
 program.addCommand(mcp)
+program.addCommand(registry)
 
 program.parse()
