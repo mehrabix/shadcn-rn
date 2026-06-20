@@ -70,3 +70,5 @@ export function createSpinner(text?: string): Spinner {
 
   return spinner
 }
+
+export const spinner = createSpinner

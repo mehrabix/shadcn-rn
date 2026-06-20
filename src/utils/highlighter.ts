@@ -69,3 +69,12 @@ export function highlightCode(code: string, language: string = "typescript"): st
     })
     .join("\n")
 }
+
+export const highlighter = {
+  info: (text: string): string => `\x1b[36m${text}\x1b[0m`,
+  success: (text: string): string => `\x1b[32m${text}\x1b[0m`,
+  warning: (text: string): string => `\x1b[33m${text}\x1b[0m`,
+  error: (text: string): string => `\x1b[31m${text}\x1b[0m`,
+  dim: (text: string): string => `\x1b[2m${text}\x1b[0m`,
+  bold: (text: string): string => `\x1b[1m${text}\x1b[0m`,
+}

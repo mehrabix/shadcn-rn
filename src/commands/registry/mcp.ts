@@ -11,7 +11,9 @@ export async function registryMcp(options: RegistryMcpOptions): Promise<void> {
 
   try {
     const { createMcpServer } = await import("../../mcp")
-    info("Registry MCP server started")
+    const server = createMcpServer({ cwd })
+    await server.connect()
+    info("Registry MCP server started and listening")
   } catch {
     info("Registry MCP server not available")
   }

@@ -12,7 +12,8 @@ export async function mcp(options: McpOptions): Promise<void> {
   try {
     const { createMcpServer } = await import("../mcp")
     const server = createMcpServer({ cwd })
-    info("MCP server started")
+    await server.connect()
+    info("MCP server started and listening")
   } catch {
     info("MCP server not available")
   }

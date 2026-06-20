@@ -8,15 +8,18 @@ export interface RegistryBuildOptions {
 export async function registryBuild(
   options: RegistryBuildOptions
 ): Promise<void> {
-  const { cwd } = options
+  const { cwd, output } = options
 
   log("Building registry...")
 
   try {
     const { buildRegistry } = await import("../../registry/builder")
-    info("Registry built successfully")
+    await buildRegistry({
+      cwd,
+      outputDir: output || "dist",
+    })
     success("Registry build complete!")
-  } catch {
-    info("Registry build failed")
+  } catch (err) {
+    info(`Registry build failed: ${err}`)
   }
 }

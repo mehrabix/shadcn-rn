@@ -2,9 +2,8 @@ import { getRegistryItems } from "../registry/api"
 import { buildUrlAndHeadersForRegistryItem } from "../registry/builder"
 import { configWithDefaults } from "../registry/config"
 import { REGISTRY_URL, SHADCN_URL } from "../registry/constants"
-import { type registryConfigSchema } from "../registry/schema"
+import { type registryConfigSchema, type Config } from "../registry/schema"
 import { isUrl } from "../registry/utils"
-import { createConfig } from "../utils/get-config"
 import { highlighter } from "../utils/highlighter"
 import { logger } from "../utils/logger"
 import open from "open"
@@ -222,14 +221,29 @@ export async function resolveRegistryBaseConfig(
     registries?: z.infer<typeof registryConfigSchema>
   }
 ) {
-  let shadowConfig = configWithDefaults(
-    createConfig({
-      resolvedPaths: {
-        cwd,
-      },
-      ...(options?.registries && { registries: options.registries }),
-    })
-  )
+  let shadowConfig = configWithDefaults({
+    style: "default",
+    tsx: true,
+    nativewind: {
+      baseColor: "neutral",
+      cssVariables: true,
+    },
+    aliases: {
+      components: "@/components",
+      utils: "@/lib/utils",
+    },
+    resolvedPaths: {
+      cwd,
+      nativewindConfig: "nativewind.config.js",
+      nativewindCss: "global.css",
+      utils: "@/lib/utils",
+      components: "@/components",
+      lib: "@/lib",
+      hooks: "@/hooks",
+      ui: "@/components/ui",
+    },
+    ...(options?.registries && { registries: options.registries }),
+  } as Config)
 
   const { config: updatedConfig } = await ensureRegistriesInConfig(
     [initUrl],

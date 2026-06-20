@@ -18,7 +18,7 @@ export async function init(options: InitOptions): Promise<void> {
   log("Initializing shadcn-rn...")
 
   const projectInfo = await getProjectInfo(cwd)
-  info(`Detected framework: ${projectInfo.framework}`)
+  info(`Detected framework: ${projectInfo.framework.label}`)
   info(`Package manager: ${projectInfo.packageManager}`)
 
   if (!projectInfo.hasNativeWind) {
