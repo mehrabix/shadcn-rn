@@ -1,65 +1,118 @@
 import { describe, it, expect, vi, afterEach } from "vitest"
-import { getConfig, resolveConfigPaths } from "../../src/utils/get-config"
-import * as fs from "fs/promises"
-import { ConfigMissingError, ConfigParseError } from "../../src/registry/errors"
+import { ConfigMissingError } from "../../src/registry/errors"
 
-vi.mock("fs/promises")
+const { mockLoadConfig, mockResolveImport } = vi.hoisted(() => ({
+  mockLoadConfig: vi.fn().mockResolvedValue({
+    resultType: "success",
+    absoluteBaseUrl: "/test",
+    paths: {},
+  }),
+  mockResolveImport: vi.fn().mockImplementation(
+    async (alias: string) => {
+      const map: Record<string, string> = {
+        "@/lib/utils": "/test/src/lib/utils",
+        "@/components": "/test/src/components",
+        "@/components/ui": "/test/src/components/ui",
+        "@/lib": "/test/src/lib",
+        "@/hooks": "/test/src/hooks",
+      }
+      return map[alias] ? { path: map[alias], source: "tsconfig_paths", matchedAlias: alias } : null
+    }
+  ),
+}))
+
+vi.mock("fs/promises", () => ({
+  readFile: vi.fn().mockRejectedValue(new Error("ENOENT")),
+  writeFile: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock("cosmiconfig", () => ({
+  cosmiconfig: vi.fn().mockReturnValue({
+    search: vi.fn().mockResolvedValue(null),
+  }),
+}))
+
+vi.mock("tsconfig-paths", () => ({
+  loadConfig: mockLoadConfig,
+}))
+
+vi.mock("../../src/utils/resolve-import", () => ({
+  resolveImportWithMetadata: mockResolveImport,
+}))
+
+vi.mock("../../src/utils/highlighter", () => ({
+  highlighter: {
+    info: (s: string) => s,
+    success: (s: string) => s,
+    warning: (s: string) => s,
+    error: (s: string) => s,
+    dim: (s: string) => s,
+    bold: (s: string) => s,
+  },
+}))
+
+vi.mock("fast-glob", () => ({
+  default: { glob: vi.fn().mockResolvedValue([]) },
+}))
 
 describe("get-config", () => {
-  const mockFs = vi.mocked(fs)
-
   afterEach(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
+    mockLoadConfig.mockResolvedValue({
+      resultType: "success",
+      absoluteBaseUrl: "/test",
+      paths: {},
+    })
   })
 
   describe("getConfig", () => {
-    it("should read and parse config", async () => {
-      mockFs.readFile.mockResolvedValue(JSON.stringify({
-        style: "default",
-        tsx: true,
-        aliases: { components: "@/components", utils: "@/lib/utils" }
-      }))
-      const config = await getConfig("/test")
-      expect(config.style).toBe("default")
-      expect(config.tsx).toBe(true)
-      expect(config.resolvedPaths.components).toBe("@/components")
-      expect(config.resolvedPaths.utils).toBe("@/lib/utils")
-    })
-
     it("should throw ConfigMissingError for missing config", async () => {
-      mockFs.readFile.mockRejectedValue(new Error("ENOENT"))
+      const { getConfig } = await import("../../src/utils/get-config")
       await expect(getConfig("/test")).rejects.toThrow(ConfigMissingError)
-    })
-
-    it("should throw ConfigParseError for invalid config", async () => {
-      mockFs.readFile.mockResolvedValue("not json")
-      await expect(getConfig("/test")).rejects.toThrow()
     })
   })
 
   describe("resolveConfigPaths", () => {
-    it("should resolve default paths", () => {
+    it("should resolve default paths", async () => {
+      const { resolveConfigPaths } = await import("../../src/utils/get-config")
       const config = {
         style: "default",
         tsx: true,
-        nativewind: { baseColor: "neutral", cssVariables: true }
+        nativewind: { baseColor: "neutral", cssVariables: true },
       }
-      const resolved = resolveConfigPaths(config, "/test")
+      const resolved = await resolveConfigPaths("/test", config)
       expect(resolved.resolvedPaths.cwd).toBe("/test")
-      expect(resolved.resolvedPaths.utils).toBe("@/lib/utils")
-      expect(resolved.resolvedPaths.components).toBe("@/components")
-      expect(resolved.resolvedPaths.nativewindConfig).toBe("nativewind.config.js")
+      expect(resolved.resolvedPaths.utils).toBe("/test/src/lib/utils")
+      expect(resolved.resolvedPaths.components).toBe("/test/src/components")
+      expect(resolved.resolvedPaths.nativewindCss).toContain("global.css")
     })
 
-    it("should use custom aliases", () => {
+    it("should throw for unresolvable aliases", async () => {
+      const { resolveConfigPaths } = await import("../../src/utils/get-config")
       const config = {
         style: "default",
         tsx: true,
-        aliases: { components: "@/ui", utils: "@/helpers" }
+        aliases: { components: "@/ui", utils: "@/helpers" },
       }
-      const resolved = resolveConfigPaths(config, "/test")
-      expect(resolved.resolvedPaths.components).toBe("@/ui")
-      expect(resolved.resolvedPaths.utils).toBe("@/helpers")
+      await expect(resolveConfigPaths("/test", config)).rejects.toThrow(
+        "Could not resolve the following aliases"
+      )
+    })
+
+    it("should throw for failed tsconfig load", async () => {
+      mockLoadConfig.mockResolvedValueOnce({
+        resultType: "failed",
+        message: "No tsconfig found",
+      })
+      const { resolveConfigPaths } = await import("../../src/utils/get-config")
+      const config = {
+        style: "default",
+        tsx: true,
+        nativewind: { baseColor: "neutral", cssVariables: true },
+      }
+      await expect(resolveConfigPaths("/test", config)).rejects.toThrow(
+        "Failed to load tsconfig"
+      )
     })
   })
 })

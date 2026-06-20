@@ -34,13 +34,15 @@ export const rawConfigSchema = z
         prefix: z.string().default("").optional(),
       })
       .default({}),
-    aliases: z.object({
-      components: z.string().default("@/components"),
-      utils: z.string().default("@/lib/utils"),
-      ui: z.string().optional(),
-      lib: z.string().optional(),
-      hooks: z.string().optional(),
-    }),
+    aliases: z
+      .object({
+        components: z.string().default("@/components"),
+        utils: z.string().default("@/lib/utils"),
+        ui: z.string().optional(),
+        lib: z.string().optional(),
+        hooks: z.string().optional(),
+      })
+      .default({}),
     registries: registryConfigSchema.optional(),
   })
   .strict()
@@ -267,3 +269,12 @@ export const searchResultsSchema = z.object({
   }),
   items: z.array(searchResultItemSchema),
 })
+
+export const workspaceConfigSchema = z.object({
+  components: configSchema.nullable().optional(),
+  ui: configSchema.nullable().optional(),
+  lib: configSchema.nullable().optional(),
+  hooks: configSchema.nullable().optional(),
+})
+
+export type WorkspaceConfig = z.infer<typeof workspaceConfigSchema>
