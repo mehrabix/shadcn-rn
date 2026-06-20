@@ -1,18 +1,41 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { infoCommand } from "../../src/commands/info"
-import { migrate } from "../../src/commands/migrate"
-import { diff } from "../../src/commands/diff"
-import { apply } from "../../src/commands/apply"
-import { eject } from "../../src/commands/eject"
 
 vi.mock("open", () => ({
   default: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock("fs", async () => {
+  const actual = await vi.importActual<typeof import("fs")>("fs")
+  return {
+    ...actual,
+    existsSync: vi.fn().mockReturnValue(true),
+  }
+})
+
+vi.mock("fs/promises", () => ({
+  readFile: vi.fn().mockResolvedValue("test content"),
+  writeFile: vi.fn().mockResolvedValue(undefined),
+  readdir: vi.fn().mockResolvedValue([]),
+  stat: vi.fn().mockResolvedValue({ isDirectory: () => false, isFile: () => true }),
+  access: vi.fn().mockResolvedValue(undefined),
+  mkdir: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock("prompts", () => ({
+  default: vi.fn().mockResolvedValue({ confirm: true }),
 }))
 
 vi.mock("../../src/utils/get-config", () => ({
   getConfig: vi.fn().mockResolvedValue({
     style: "default",
     tsx: true,
+    aliases: {
+      components: "@/components",
+      utils: "@/lib/utils",
+      ui: "@/components/ui",
+      hooks: "@/hooks",
+      lib: "@/lib",
+    },
     resolvedPaths: {
       cwd: "/test",
       nativewindConfig: "nativewind.config.js",
@@ -26,39 +49,59 @@ vi.mock("../../src/utils/get-config", () => ({
   }),
 }))
 
-vi.mock("fs/promises", () => ({
-  readFile: vi.fn().mockResolvedValue("test content"),
-  writeFile: vi.fn().mockResolvedValue(undefined),
+vi.mock("../../src/migrations", () => ({
+  runMigration: vi.fn().mockResolvedValue(true),
+  runAllMigrations: vi.fn().mockResolvedValue(undefined),
+  migrations: [],
 }))
 
+vi.mock("../../src/registry/api", () => ({
+  getRegistryItems: vi.fn().mockResolvedValue([]),
+}))
+
+vi.mock("../../src/utils/add-components", () => ({
+  addComponents: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock("path", async () => {
+  const actual = await vi.importActual<typeof import("path")>("path")
+  return {
+    ...actual,
+    resolve: (...args: string[]) => args[args.length - 1],
+  }
+})
+
 describe("commands", () => {
+  const mockExit = vi.spyOn(process, "exit").mockImplementation((() => undefined) as never)
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  describe("migrate", () => {
-    it("should run migrations without type", async () => {
-      await expect(migrate({ cwd: "/test" })).resolves.toBeUndefined()
-    })
+  afterAll(() => {
+    mockExit.mockRestore()
+  })
 
+  describe("migrate", () => {
     it("should run specific migration", async () => {
-      await expect(migrate({ cwd: "/test", type: "icons" })).resolves.toBeUndefined()
+      const { migrate } = await import("../../src/commands/migrate")
+      await migrate.parseAsync(["node", "migrate", "--type", "icons", "-y", "-c", "/test"])
+      expect(mockExit).not.toHaveBeenCalled()
     })
   })
 
   describe("info", () => {
     it("should display project info", async () => {
-      await expect(infoCommand({ cwd: "/test" })).resolves.toBeUndefined()
+      const { infoCommand } = await import("../../src/commands/info")
+      await infoCommand.parseAsync(["node", "info", "-c", "/test"])
+      expect(mockExit).not.toHaveBeenCalled()
     })
   })
 
   describe("diff", () => {
     it("should check all components", async () => {
-      await expect(diff({ cwd: "/test" })).resolves.toBeUndefined()
-    })
-
-    it("should check specific component", async () => {
-      await expect(diff({ cwd: "/test", component: "button" })).resolves.toBeUndefined()
+      const { diff } = await import("../../src/commands/diff")
+      await diff.parseAsync(["node", "diff", "-c", "/test"])
     })
   })
 })

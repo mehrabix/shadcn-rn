@@ -1,27 +1,53 @@
-import * as fs from "fs/promises"
-import * as path from "path"
+import path from "path"
 import { getConfig } from "../utils/get-config"
-import { log, info } from "../utils/logger"
+import { log, info, success, error as logError } from "../utils/logger"
+import { highlighter } from "../utils/highlighter"
+import { Command } from "commander"
+import { z } from "zod"
 
-export interface InfoOptions {
-  cwd: string
-}
+export const infoOptionsSchema = z.object({
+  cwd: z.string(),
+  json: z.boolean(),
+})
 
-export async function infoCommand(options: InfoOptions): Promise<void> {
-  const { cwd } = options
+export const infoCommand = new Command()
+  .name("info")
+  .description("display information about the project")
+  .option(
+    "-c, --cwd <cwd>",
+    "the working directory. defaults to the current directory.",
+    process.cwd()
+  )
+  .option("--json", "output as JSON.", false)
+  .action(async (opts) => {
+    try {
+      const options = infoOptionsSchema.parse({
+        ...opts,
+        cwd: path.resolve(opts.cwd),
+      })
 
-  try {
-    const config = await getConfig(cwd)
+      const config = await getConfig(options.cwd)
 
-    log("Project Info:")
-    info(`Style: ${config.style}`)
-    info(`TSX: ${config.tsx}`)
-    info(`Components Path: ${config.resolvedPaths.components}`)
-    info(`Utils Path: ${config.resolvedPaths.utils}`)
-    info(`UI Path: ${config.resolvedPaths.ui}`)
-    info(`Hooks Path: ${config.resolvedPaths.hooks}`)
-    info(`NativeWind CSS: ${config.resolvedPaths.nativewindCss}`)
-  } catch {
-    log("No shadcn-rn configuration found")
-  }
-}
+      if (options.json) {
+        console.log(JSON.stringify(config, null, 2))
+        return
+      }
+
+      info("Project Information:")
+      log(`  Style: ${highlighter.info(config.style)}`)
+      log(`  TSX: ${highlighter.info(String(config.tsx))}`)
+      log(`  Components Path: ${highlighter.info(config.aliases.components)}`)
+      log(`  Utils Path: ${highlighter.info(config.aliases.utils)}`)
+      log(`  UI Path: ${highlighter.info(config.aliases.ui)}`)
+      log(`  Hooks Path: ${highlighter.info(config.aliases.hooks)}`)
+      log(`  NativeWind CSS: ${highlighter.info(config.resolvedPaths.nativewindCss)}`)
+
+      if (config.nativewind) {
+        log(`  Base Color: ${highlighter.info(config.nativewind.baseColor || "default")}`)
+        log(`  CSS Variables: ${highlighter.info(String(config.nativewind.cssVariables))}`)
+      }
+    } catch (err) {
+      logError(`Failed to get project info: ${err}`)
+      process.exit(1)
+    }
+  })

@@ -1,47 +1,46 @@
-import * as fs from "fs/promises"
-import * as path from "path"
-import { readRegistryWithIncludes } from "../registry/loader"
-import { log, info, success, error } from "../utils/logger"
+import path from "path"
+import { getConfig } from "../utils/get-config"
+import { log, info, success, error as logError } from "../utils/logger"
+import { highlighter } from "../utils/highlighter"
+import { Command } from "commander"
+import { z } from "zod"
 
-export interface BuildOptions {
-  cwd: string
-  output?: string
-}
+export const buildOptionsSchema = z.object({
+  cwd: z.string(),
+  output: z.string(),
+  silent: z.boolean(),
+})
 
-export async function build(options: BuildOptions): Promise<void> {
-  const { cwd, output = "registry-output" } = options
-
-  log("Building registry...")
-
-  const registryPath = path.join(cwd, "registry.json")
-
-  try {
-    await fs.access(registryPath)
-  } catch {
-    error("registry.json not found in project root")
-    return
-  }
-
-  const registry = await readRegistryWithIncludes(registryPath)
-
-  const outputDir = path.join(cwd, output)
-  await fs.mkdir(outputDir, { recursive: true })
-
-  const indexItems = registry.items.map((item) => ({
-    name: item.name,
-    type: item.type,
-    description: item.description,
-  }))
-
-  await fs.writeFile(
-    path.join(outputDir, "index.json"),
-    JSON.stringify(indexItems, null, 2)
+export const build = new Command()
+  .name("build")
+  .description("build registry JSON files")
+  .option(
+    "-c, --cwd <cwd>",
+    "the working directory. defaults to the current directory.",
+    process.cwd()
   )
+  .option("-o, --output <dir>", "the output directory.", "registry-output")
+  .option("-s, --silent", "mute output.", false)
+  .action(async (opts) => {
+    try {
+      const options = buildOptionsSchema.parse({
+        ...opts,
+        cwd: path.resolve(opts.cwd),
+      })
 
-  for (const item of registry.items) {
-    const itemPath = path.join(outputDir, `${item.name}.json`)
-    await fs.writeFile(itemPath, JSON.stringify(item, null, 2))
-  }
+      const config = await getConfig(options.cwd)
 
-  success(`Built ${registry.items.length} items to ${output}/`)
-}
+      log("Building registry...")
+
+      const { buildRegistry } = await import("../registry/builder")
+      await buildRegistry({
+        cwd: options.cwd,
+        outputDir: options.output,
+      })
+
+      success(`Registry built to ${highlighter.info(options.output)}`)
+    } catch (err) {
+      logError(`Failed to build registry: ${err}`)
+      process.exit(1)
+    }
+  })
