@@ -10,6 +10,7 @@ import { transformCleanup } from "./transform-cleanup"
 import { transformRtl } from "./transform-rtl"
 import { transformTwPrefixes } from "./transform-tw-prefix"
 import { transformFont } from "./transform-font"
+import { transformRsc } from "./transform-rsc"
 import { transformRender } from "./transform-render"
 import { transformMenu } from "./transform-menu"
 import { transformAsChild } from "./transform-aschild"
@@ -49,6 +50,7 @@ async function createTempSourceFile(filename: string) {
 export async function transform(
   opts: TransformOpts,
   transformers: Transformer[] = [
+    transformRsc,
     transformImport,
     transformCssVars,
     transformTwPrefixes,
